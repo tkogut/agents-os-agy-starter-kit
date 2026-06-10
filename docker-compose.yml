@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  agents-os:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agents-os:latest
+    container_name: agents-os-dev
+    volumes:
+      # Mount project workspace
+      - .:/workspace
+      # Share SSH keys for seamless Git operations
+      - ~/.ssh:/root/.ssh:ro
+      # Share Github CLI config (tokens, login state)
+      - ~/.config/gh:/root/.config/gh:ro
+    environment:
+      - AGENTS_OS_ENV=devcontainer
+    # Keep container alive, interactive
+    stdin_open: true
+    tty: true
