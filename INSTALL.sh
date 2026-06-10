@@ -152,6 +152,24 @@ if [ -f "./os-add-skill" ]; then
     fi
 fi
 
+# 5. Instalacja Pre-commit Security Hook
+echo "🔐 Instalacja pre-commit security hook..."
+if [ -f "./hooks/pre-commit" ]; then
+    # Zainstaluj hook w bieżącym repo (jeśli jesteśmy wewnątrz repozytorium git)
+    if [ -d ".git/hooks" ]; then
+        cp ./hooks/pre-commit .git/hooks/pre-commit
+        chmod +x .git/hooks/pre-commit
+        echo "   ✓ pre-commit hook zainstalowany w .git/hooks/"
+    fi
+    # Skopiuj hook do szablonu vault — nowe projekty automatycznie go dziedziczą
+    mkdir -p "$VAULT_DIR/hooks"
+    cp ./hooks/pre-commit "$VAULT_DIR/hooks/pre-commit"
+    chmod +x "$VAULT_DIR/hooks/pre-commit"
+    echo "   ✓ pre-commit hook dodany do szablonu Vault (nowe projekty dziedziczą automatycznie)"
+else
+    echo "   ⚠️  Plik hooks/pre-commit nie znaleziony — pomijam instalację hooka."
+fi
+
 echo "⚙️ Generowanie i rejestracja konfiguracji powłoki w ~/.bashrc.d/antigravity..."
 mkdir -p "$HOME/.bashrc.d"
 cat << 'EOF' > "$HOME/.bashrc.d/antigravity"

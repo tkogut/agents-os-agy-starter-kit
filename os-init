@@ -74,6 +74,17 @@ else
 fi
 
 # --------------------------------------------------------------------------- #
+# 2c. Instalacja pre-commit security hook w nowym projekcie
+# --------------------------------------------------------------------------- #
+HOOK_SRC="$PROJECT_DIR/hooks/pre-commit"
+HOOK_DST="$PROJECT_DIR/.git/hooks/pre-commit"
+if [ -f "$HOOK_SRC" ] && [ -d "$PROJECT_DIR/.git/hooks" ]; then
+    cp "$HOOK_SRC" "$HOOK_DST"
+    chmod +x "$HOOK_DST"
+    echo "🔐 Pre-commit security hook zainstalowany w projekcie."
+fi
+
+# --------------------------------------------------------------------------- #
 # 3. Otwórz Antigravity IDE w środowisku WSL:Ubuntu
 # --------------------------------------------------------------------------- #
 # Używamy bin/antigravity-ide z --remote wsl+Ubuntu i ścieżką Linux.

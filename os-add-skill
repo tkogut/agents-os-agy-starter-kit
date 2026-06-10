@@ -1,15 +1,137 @@
 #!/usr/bin/env python3
+# ==============================================================================
+# os-add-skill <nazwa-skilla>
+# AGENTS-OS v5.0 SWARM — Skill Downloader (Hardened OSS Edition)
+#
+# Security guardrails (Faza 2):
+#   - Whitelist zaufanych domen pobierania
+#   - Walidacja SHA256 checksums dla plików wykonywalnych (.sh, .py, .js)
+#   - Ochrona przed Path Traversal
+#   - Rygorystyczna walidacja nazwy skilla
+# ==============================================================================
 import os
 import sys
 import json
 import re
+import hashlib
 import urllib.request
 import urllib.error
 
-API_URL = "https://api.github.com/repos/sickn33/antigravity-awesome-skills/contents/skills/{skill_name}"
-HEADERS = {"User-Agent": "Antigravity-Agent-Swarm"}
+# --------------------------------------------------------------------------- #
+# Konfiguracja bezpieczeństwa
+# --------------------------------------------------------------------------- #
 
-def find_project_root():
+# Whitelist zaufanych domen — jedyne dozwolone źródła pobierania skilli
+TRUSTED_DOMAINS = [
+    "api.github.com",
+    "raw.githubusercontent.com",
+    "github.com",
+]
+
+# Oficjalny rejestr skilli AGENTS-OS
+OFFICIAL_REGISTRY_HOST = "api.github.com"
+OFFICIAL_REGISTRY_REPO = "sickn33/antigravity-awesome-skills"
+API_URL = f"https://{OFFICIAL_REGISTRY_HOST}/repos/{OFFICIAL_REGISTRY_REPO}/contents/skills/{{skill_name}}"
+
+# Rozszerzenia plików wykonywalnych wymagające walidacji checksum
+EXECUTABLE_EXTENSIONS = {".sh", ".py", ".js", ".bash"}
+
+# Plik manifestu z checksumami (opcjonalny — jeśli dostępny w rejestrze)
+CHECKSUM_MANIFEST_URL = f"https://raw.githubusercontent.com/{OFFICIAL_REGISTRY_REPO}/main/checksums.sha256"
+
+HEADERS = {"User-Agent": "AGENTS-OS-v5.0/Swarm"}
+
+
+# --------------------------------------------------------------------------- #
+# Walidacja URL
+# --------------------------------------------------------------------------- #
+def validate_url(url: str) -> bool:
+    """Sprawdza czy URL pochodzi z zaufanej domeny (whitelist)."""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        host = parsed.netloc.lower()
+        # Sprawdź czy host pasuje do którejś z zaufanych domen
+        for trusted in TRUSTED_DOMAINS:
+            if host == trusted or host.endswith(f".{trusted}"):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def safe_request(url: str, headers: dict = None) -> bytes:
+    """Wykonuje request tylko do whitelistowanych domen."""
+    if not validate_url(url):
+        from urllib.parse import urlparse
+        host = urlparse(url).netloc
+        raise SecurityError(
+            f"BLOKADA BEZPIECZEŃSTWA: Domena '{host}' nie jest na liście zaufanych.\n"
+            f"   Zaufane domeny: {', '.join(TRUSTED_DOMAINS)}"
+        )
+    req = urllib.request.Request(url, headers=headers or HEADERS)
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return response.read()
+
+
+class SecurityError(Exception):
+    pass
+
+
+# --------------------------------------------------------------------------- #
+# Ładowanie manifestu checksums
+# --------------------------------------------------------------------------- #
+def load_checksum_manifest() -> dict:
+    """Próbuje pobrać manifest SHA256. Zwraca pusty dict jeśli niedostępny."""
+    try:
+        data = safe_request(CHECKSUM_MANIFEST_URL)
+        manifest = {}
+        for line in data.decode("utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "  " in line:
+                sha, fname = line.split("  ", 1)
+                manifest[fname.strip()] = sha.strip().lower()
+        return manifest
+    except Exception:
+        return {}
+
+
+def verify_checksum(file_path: str, content: bytes, manifest: dict, skill_name: str) -> bool:
+    """
+    Weryfikuje SHA256 pliku wykonywalnego względem manifestu.
+    Jeśli manifest jest pusty (brak pliku checksums.sha256), loguje ostrzeżenie i przepuszcza.
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext not in EXECUTABLE_EXTENSIONS:
+        return True  # Niebinarne pliki nie wymagają weryfikacji
+
+    # Klucz w manifeście: skills/<skill>/<rel_path>
+    manifest_key = f"skills/{skill_name}/{os.path.basename(file_path)}"
+    expected_sha = manifest.get(manifest_key)
+
+    if not expected_sha:
+        if manifest:
+            # Manifest istnieje, ale brak wpisu dla tego pliku — ostrzeżenie
+            print(f"   ⚠️  Brak wpisu checksum dla wykonywalnego: {os.path.basename(file_path)}")
+            print(f"      Plik zostanie zainstalowany, ale ZWERYFIKUJ go ręcznie przed użyciem.")
+        # Brak manifestu — akceptujemy (degraded mode)
+        return True
+
+    actual_sha = hashlib.sha256(content).hexdigest().lower()
+    if actual_sha == expected_sha:
+        print(f"   ✅ Checksum OK: {os.path.basename(file_path)}")
+        return True
+    else:
+        print(f"   ❌ CHECKSUM MISMATCH: {os.path.basename(file_path)}")
+        print(f"      Oczekiwano: {expected_sha[:16]}...")
+        print(f"      Otrzymano:  {actual_sha[:16]}...")
+        return False
+
+
+# --------------------------------------------------------------------------- #
+# Logika pobierania
+# --------------------------------------------------------------------------- #
+def find_project_root() -> str | None:
     curr = os.getcwd()
     while curr != os.path.dirname(curr):
         if os.path.exists(os.path.join(curr, ".agents")):
@@ -17,89 +139,141 @@ def find_project_root():
         curr = os.path.dirname(curr)
     return None
 
-def download_item(url, dest_path):
-    print(f"   📥 Pobieranie: {os.path.basename(dest_path)}...")
-    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-    req = urllib.request.Request(url, headers=HEADERS)
-    try:
-        with urllib.request.urlopen(req) as response, open(dest_path, "wb") as out_file:
-            out_file.write(response.read())
-    except Exception as e:
-        print(f"   ❌ Nie udało się pobrać {url}: {e}")
 
-def fetch_dir(skill_name, api_url, dest_dir):
-    req = urllib.request.Request(api_url, headers=HEADERS)
+def download_item(url: str, dest_path: str, content: bytes) -> None:
+    print(f"   📥 Instalacja: {os.path.basename(dest_path)}")
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    with open(dest_path, "wb") as f:
+        f.write(content)
+    # Zachowaj bit wykonywalny dla plików .sh i .py
+    if os.path.splitext(dest_path)[1].lower() in {".sh", ".py"}:
+        os.chmod(dest_path, 0o755)
+
+
+def fetch_dir(skill_name: str, api_url: str, dest_dir: str, manifest: dict, errors: list) -> bool:
+    """Rekurencyjnie pobiera katalog skilla z weryfikacją bezpieczeństwa."""
     try:
-        with urllib.request.urlopen(req) as response:
-            items = json.loads(response.read().decode('utf-8'))
+        data = safe_request(api_url)
+        items = json.loads(data.decode("utf-8"))
+    except SecurityError as e:
+        print(f"❌ {e}")
+        return False
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            print(f"❌ Skill '{skill_name}' nie został odnaleziony w oficjalnym rejestrze.")
+            print(f"❌ Skill '{skill_name}' nie znaleziony w oficjalnym rejestrze.")
         else:
             print(f"❌ Błąd API GitHub ({e.code}): {e.reason}")
         return False
     except Exception as e:
-        print(f"❌ Błąd połączenia z API GitHub: {e}")
+        print(f"❌ Błąd połączenia: {e}")
         return False
 
     if not isinstance(items, list):
-        print(f"❌ Niepoprawny format odpowiedzi z API.")
+        print("❌ Niepoprawny format odpowiedzi API.")
         return False
 
+    success = True
     for item in items:
-        name = item.get("name")
+        name = item.get("name", "")
         item_type = item.get("type")
         download_url = item.get("download_url")
-        path = item.get("path")
-        
-        # Relatywna ścieżka od folderu skilla
+        path = item.get("path", "")
+        sub_api_url = item.get("url", "")
+
+        # Oblicz ścieżkę względną od katalogu skilla
         prefix = f"skills/{skill_name}/"
-        if path.startswith(prefix):
-            rel_path = path[len(prefix):]
-        else:
-            rel_path = name
-        
+        rel_path = path[len(prefix):] if path.startswith(prefix) else name
+
         target_path = os.path.abspath(os.path.join(dest_dir, rel_path))
-        
+
         # Ochrona przed Path Traversal
-        if not target_path.startswith(os.path.abspath(dest_dir)):
-            print(f"   ⚠️ Zablokowano próbę zapisu poza katalog docelowy: {target_path}")
+        if not target_path.startswith(os.path.abspath(dest_dir) + os.sep) and target_path != os.path.abspath(dest_dir):
+            print(f"   🚫 Path Traversal zablokowany: {rel_path}")
+            errors.append(rel_path)
             continue
 
         if item_type == "file" and download_url:
-            download_item(download_url, target_path)
-        elif item_type == "dir":
-            # Rekurencyjne pobranie podkatalogu
-            fetch_dir(skill_name, item.get("url"), target_path)
-            
-    return True
+            # Walidacja URL pliku
+            if not validate_url(download_url):
+                from urllib.parse import urlparse
+                host = urlparse(download_url).netloc
+                print(f"   🚫 Zablokowano pobieranie z niezaufanej domeny: {host}")
+                errors.append(name)
+                continue
+            try:
+                content = safe_request(download_url)
+            except Exception as e:
+                print(f"   ❌ Błąd pobierania {name}: {e}")
+                errors.append(name)
+                continue
 
+            # Weryfikacja checksum dla plików wykonywalnych
+            if not verify_checksum(target_path, content, manifest, skill_name):
+                print(f"   🚫 Instalacja ZABLOKOWANA (checksum mismatch): {name}")
+                errors.append(name)
+                continue
+
+            download_item(download_url, target_path, content)
+
+        elif item_type == "dir" and sub_api_url:
+            if not validate_url(sub_api_url):
+                print(f"   🚫 Zablokowano API call do niezaufanej domeny.")
+                continue
+            if not fetch_dir(skill_name, sub_api_url, target_path, manifest, errors):
+                success = False
+
+    return success
+
+
+# --------------------------------------------------------------------------- #
+# Entry point
+# --------------------------------------------------------------------------- #
 def main():
     if len(sys.argv) < 2:
         print("Użycie: os-add-skill <nazwa-skilla>")
+        print("Przykład: os-add-skill postgresql-optimization")
         sys.exit(1)
 
     skill_name = sys.argv[1]
-    
-    # Rygorystyczna walidacja nazwy skilla (tylko znaki alfanumeryczne, myślniki, podkreślenia)
-    if not re.match(r"^[a-zA-Z0-9\-_]+$", skill_name):
-        print("❌ BŁĄD: Nazwa skilla może zawierać tylko litery, cyfry, myślniki i podkreślenia.")
+
+    # Rygorystyczna walidacja nazwy skilla
+    if not re.match(r"^[a-zA-Z0-9\-_]{1,64}$", skill_name):
+        print("❌ BŁĄD: Niepoprawna nazwa skilla.")
+        print("   Dozwolone: litery, cyfry, myślniki, podkreślenia (max 64 znaki).")
         sys.exit(1)
 
     project_root = find_project_root()
     if not project_root:
-        print("❌ BŁĄD: Nie jesteś w katalogu projektu AGENTS-OS (brak folderu .agents/).")
+        print("❌ BŁĄD: Nie jesteś w katalogu projektu AGENTS-OS (brak .agents/).")
         sys.exit(1)
 
     dest_dir = os.path.abspath(os.path.join(project_root, ".agents", "skills", skill_name))
-    print(f"🪐 Pobieranie skilla '{skill_name}' z oficjalnego katalogu...")
-    
-    success = fetch_dir(skill_name, API_URL.format(skill_name=skill_name), dest_dir)
-    if success:
-        print(f"✅ Skill '{skill_name}' został pomyślnie dodany do projektu.")
+
+    print(f"🪐 Pobieranie skilla '{skill_name}' z oficjalnego rejestru...")
+    print(f"   Źródło: {OFFICIAL_REGISTRY_REPO} [ZAUFANE]")
+
+    # Załaduj manifest checksums (opcjonalny)
+    print("🔐 Ładowanie manifestu checksums...")
+    manifest = load_checksum_manifest()
+    if manifest:
+        print(f"   ✅ Manifest załadowany ({len(manifest)} wpisów).")
+    else:
+        print("   ℹ️  Manifest checksums niedostępny — tryb bez weryfikacji sum kontrolnych.")
+
+    errors = []
+    success = fetch_dir(skill_name, API_URL.format(skill_name=skill_name), dest_dir, manifest, errors)
+
+    if errors:
+        print(f"\n⚠️  Zablokowano {len(errors)} plik(i) z powodów bezpieczeństwa: {errors}")
+
+    if success and not errors:
+        print(f"\n✅ Skill '{skill_name}' zainstalowany pomyślnie.")
         print(f"   Lokalizacja: {dest_dir}")
+    elif success and errors:
+        print(f"\n⚠️  Skill '{skill_name}' zainstalowany częściowo (patrz wyżej).")
     else:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
