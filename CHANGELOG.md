@@ -1,0 +1,59 @@
+# 🛸 Historia Zmian / Changelog — AGENTS-OS v5.0 (Universal Swarm)
+
+Wszystkie zmiany w tej wersji są bezpośrednią odpowiedzią na audyt przenaszalności systemu zawarty w [AGENTS-OS_Evaluation_Report.md](file:///home/tkogut/projects/agents-os-agy-starter-kit/AGENTS-OS_Evaluation_Report.md).
+
+---
+
+## [5.0.0] - 2026-06-10
+
+### 🚀 Aktualizacja Systemowa do v5.0 (System-wide Version Increment)
+* **Konstytucja i Dokumentacja**: Zaktualizowano Konstytucję AGENTS-OS oraz wszystkie powiązane specyfikacje i raporty do wersji v5.0, zapewniając pełną spójność topologii systemowej w repozytorium.
+* **Synchronizacja Vault**: Zsynchronizowano szablony w katalogu Vault (`vault/`), w tym Konstytucję, reguły GOVERNANCE i specyfikację diagramu zależności `graph.json`.
+
+## [4.2.1] - 2026-05-25
+
+### 🚀 Hardening i Zabezpieczenia (Hardening & Security)
+* **Ścieżki relatywne w teście E2E**: Zaimplementowano pobieranie ścieżek relatywnych względem lokalizacji pliku skryptu `test_bootstrap.sh`, co umożliwia uruchomienie testów z dowolnego katalogu w systemie.
+* **Zabezpieczenie przed Path Traversal w `os-add-skill`**: Dodano walidację nazwy skilla (blokada znaków `..`, `/`, `\`) chroniącą przed zapisem plików poza docelowym folderem projektu.
+
+## [4.2.0] - 2026-05-24
+
+### 🚀 Poprawki i Automatyzacja (Portability & Automation)
+
+* **Dynamiczne dogrywanie skilli (On-Demand & RAG Catalog)**:
+  * Wdrożono komendę `os-add-skill` (skrypt python `os-add-skill-run`) umożliwiający pobieranie pojedynczych skilli z repozytorium GitHub za pomocą API.
+  * Zaimplementowano katalog `awesome-skills-catalog.md` w szablonie (Vault) umożliwiający asystentom AI dopasowywanie potrzeb programisty przez RAG i sugerowanie wgrania skilli za pomocą `os-add-skill`.
+  * Zastąpiono pobieranie całego repozytorium `awesome-skills` lekkim dociąganiem on-demand podczas inicjalizacji.
+* **Instalacja wtyczki Caveman przez URL**:
+  * Zmieniono cel instalacji wtyczki `caveman` w [INSTALL.sh](file:///home/tkogut/projects/agents-os-agy-starter-kit/INSTALL.sh) na bezpośredni link GitHub (`https://github.com/juliusbrussee/caveman`). Rozwiązuje to błąd instalacji lokalnej.
+* **Automatyczne czyszczenie starych szablonów**:
+  * Dodano moduł czyszczący w [INSTALL.sh](file:///home/tkogut/projects/agents-os-agy-starter-kit/INSTALL.sh), usuwający stare wersje szablonów (np. `v4.0-swarm`) przed kopiowaniem nowych.
+* **Automatyczny test E2E**:
+  * Utworzono skrypt testowy [test_bootstrap.sh](file:///home/tkogut/projects/agents-os-agy-starter-kit/execution/test_bootstrap.sh) weryfikujący tworzenie projektów, strukturę Złotego Standardu, repozytorium git, dynamiczne dociąganie skilla `postgresql-optimization` oraz push na GitHub.
+
+---
+
+## [4.1.0] - 2026-05-24
+
+### 🚀 Nowości i Ulepszenia Przenaszalności (Portability)
+
+* **Dynamiczny odczyt nazwy użytkownika GitHub (Fix 3.1)**:
+  * Zastąpiono zahardkodowaną nazwę użytkownika `tkogut` w skrypcie [bootstrap.py](file:///home/tkogut/projects/agents-os-agy-starter-kit/global_skills/swarm-bootstrapper/scripts/bootstrap.py) oraz [os-init](file:///home/tkogut/projects/agents-os-agy-starter-kit/os-init) dynamicznym odpytywaniem przez `gh api user -q .login`.
+  * Wdrożono solidny mechanizm fallback do zmiennych konfiguracyjnych git (`git config github.user` / `git config user.name`) w przypadku braku zalogowania w CLI.
+
+* **Dynamiczne mapowanie użytkownika Windows w WSL2 (Fix 3.2)**:
+  * Zastąpiono zahardkodowany profil Windows `admin_tk` w ścieżce do IDE w [os-init](file:///home/tkogut/projects/agents-os-agy-starter-kit/os-init) dynamicznym wywołaniem systemowym `cmd.exe /c "echo %USERNAME%"`.
+  * Dzięki temu edytor Antigravity IDE uruchamia się poprawnie u każdego użytkownika WSL.
+
+* **Instalacja GitHub CLI (gh) przez APT zamiast Snap (Fix 3.3)**:
+  * Zmieniono metodę instalacji `gh` w [INSTALL.sh](file:///home/tkogut/projects/agents-os-agy-starter-kit/INSTALL.sh) ze `snap` na oficjalne repozytorium APT Debiana/Ubuntu.
+  * Rozwiązuje to błąd braku demona `snapd`/`systemd` na domyślnych dystrybucjach WSL2.
+
+* **Izolacja zależności Python w Virtualenv (Fix 3.4)**:
+  * Wprowadzono tworzenie dedykowanego środowiska wirtualnego w katalogu `~/.antigravity/venv` podczas instalacji w [INSTALL.sh](file:///home/tkogut/projects/agents-os-agy-starter-kit/INSTALL.sh).
+  * Przeniesiono instalację bibliotek `GitPython` oraz `PyGithub` do venv, eliminując potrzebę używania ryzykownej flagi `--break-system-packages`.
+  * Zaktualizowano [os-init](file:///home/tkogut/projects/agents-os-agy-starter-kit/os-init), aby automatycznie używał interpretera z venv przy wywoływaniu bootstrappera.
+
+---
+
+*Zarządzanie wersją i dokumentacją: Antigravity Agent & Community.*

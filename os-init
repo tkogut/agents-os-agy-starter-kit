@@ -1,0 +1,109 @@
+#!/bin/bash
+# ==============================================================================
+# os-init <nazwa-projektu>
+# AGENTS-OS v5.0 SWARM — Project Initializer
+# Tworzy projekt, GitHub repo, commit+push, otwiera IDE.
+# ==============================================================================
+
+set -e
+
+SKILL_SCRIPT="$HOME/.antigravity/skills/swarm-bootstrapper/scripts/bootstrap.py"
+
+# Fallback: użyj lokalnej kopii jeśli nie zainstalowano globalnie
+if [ ! -f "$SKILL_SCRIPT" ]; then
+    SKILL_SCRIPT="$(dirname "$(realpath "$0")")/global_skills/swarm-bootstrapper/scripts/bootstrap.py"
+fi
+
+if [ ! -f "$SKILL_SCRIPT" ]; then
+    echo "❌ ERR: bootstrap.py nie znaleziony. Uruchom najpierw INSTALL.sh."
+    exit 1
+fi
+
+# --------------------------------------------------------------------------- #
+# 1. Uruchom bootstrapper i przechwyć output
+# --------------------------------------------------------------------------- #
+echo "🚀 os-init: Uruchamianie bootstrappera..."
+PYTHON_BIN="python3"
+if [ -f "$HOME/.antigravity/venv/bin/python" ]; then
+    PYTHON_BIN="$HOME/.antigravity/venv/bin/python"
+fi
+OUTPUT=$("$PYTHON_BIN" "$SKILL_SCRIPT" "$@" 2>&1)
+
+# Wyświetl output (bez ostatniej linii z ścieżką)
+echo "$OUTPUT" | grep -v "^__PROJECT_DIR__:" || true
+
+# --------------------------------------------------------------------------- #
+# 2. Wyciągnij ścieżkę projektu
+# --------------------------------------------------------------------------- #
+PROJECT_DIR=$(echo "$OUTPUT" | grep "^__PROJECT_DIR__:" | sed 's/^__PROJECT_DIR__://')
+
+if [ -z "$PROJECT_DIR" ]; then
+    echo "⚠️  Nie udało się wykryć ścieżki projektu. Sprawdź bootstrap.py."
+    exit 1
+fi
+
+echo ""
+echo "📁 Projekt gotowy w: $PROJECT_DIR"
+
+# --------------------------------------------------------------------------- #
+# 3. Otwórz Antigravity IDE w środowisku WSL:Ubuntu
+# --------------------------------------------------------------------------- #
+# Używamy bin/antigravity-ide z --remote wsl+Ubuntu i ścieżką Linux.
+# To samo co funkcja antigravity() w ~/.bashrc.d/antigravity.
+# NIE używamy .exe ani wslpath — --remote obsługuje mapowanie ścieżki.
+
+IDE_BIN=""
+for user_dir in /mnt/c/Users/*; do
+    if [ -f "${user_dir}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide" ]; then
+        IDE_BIN="${user_dir}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
+        break
+    fi
+done
+
+if [ -z "$IDE_BIN" ]; then
+    WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
+    if [ -n "$WIN_USER" ]; then
+        IDE_BIN="/mnt/c/Users/${WIN_USER}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
+    else
+        IDE_BIN="/mnt/c/Users/admin_tk/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
+    fi
+fi
+
+if [ "${OS_INIT_TEST:-false}" = "true" ]; then
+    echo "🧪 [TEST] Pomijam otwieranie Antigravity IDE w trybie testowym."
+else
+    echo "🖥️  Otwieranie Antigravity IDE (WSL:Ubuntu) w: $PROJECT_DIR"
+    if [ -f "$IDE_BIN" ]; then
+        "$IDE_BIN" --remote wsl+Ubuntu "$PROJECT_DIR" &
+        echo "   ✅ IDE uruchomione w środowisku WSL:Ubuntu."
+    elif command -v antigravity-ide &>/dev/null; then
+        # Fallback: alias z .bashrc.d
+        antigravity-ide --remote wsl+Ubuntu "$PROJECT_DIR" &
+        echo "   ✅ IDE uruchomione (via alias antigravity-ide)."
+    else
+        echo "   ℹ️  Nie znaleziono IDE. Otwórz ręcznie:"
+        echo "   \"$IDE_BIN\" --remote wsl+Ubuntu \"$PROJECT_DIR\""
+    fi
+fi
+
+# Wykryj użytkownika GitHub do wyświetlenia
+GH_USER="twoj-github-username"
+if command -v gh &>/dev/null; then
+    GH_USER=$(gh api user -q .login 2>/dev/null || echo "twoj-github-username")
+fi
+if [ "$GH_USER" = "twoj-github-username" ]; then
+    GH_USER=$(git config github.user 2>/dev/null || git config user.name 2>/dev/null | tr -d ' ' || echo "twoj-github-username")
+fi
+
+PROJECT_NAME=$(basename "$PROJECT_DIR")
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✅ PROJEKT GOTOWY: $PROJECT_DIR"
+echo "  🐙 GitHub: https://github.com/${GH_USER}/${PROJECT_NAME}"
+echo ""
+echo "  Aby przejść do projektu w terminalu:"
+echo "  cd \"$PROJECT_DIR\""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Eksportuj ścieżkę żeby shell-wrapper mógł zrobić cd
+export OS_INIT_PROJECT_DIR="$PROJECT_DIR"

@@ -1,0 +1,51 @@
+{
+  "project": "agents-os-agy-starter-kit",
+  "version": "5.0",
+  "nodes": [
+    {
+      "id": ".agents/specs/AGENTS-OS.md",
+      "label": "AGENTS-OS.md",
+      "type": "Ultimate Source of Truth",
+      "description": "Constitution of AGENTS-OS v5.0 governing all Swarm rules and system operations."
+    },
+    {
+      "id": "INSTALL.sh",
+      "label": "INSTALL.sh",
+      "type": "Critical Infrastructure",
+      "description": "Installer script for AGENTS-OS dependencies, global skills, and snap compatibility links."
+    },
+    {
+      "id": "os-init",
+      "label": "os-init",
+      "type": "Critical Infrastructure",
+      "description": "System bootstrap tool to initialize new workspace nodes with v5.0 Swarm Template Vault."
+    },
+    {
+      "id": "vault",
+      "label": "vault/",
+      "type": "Critical Infrastructure",
+      "description": "Standard directory vault acting as the blueprint standard for all new sub-agents."
+    }
+  ],
+  "edges": [
+    {
+      "source": ".agents/specs/AGENTS-OS.md",
+      "target": ".agents/rules/core-rule.md",
+      "relation": "governs"
+    },
+    {
+      "source": "INSTALL.sh",
+      "target": "vault",
+      "relation": "references"
+    },
+    {
+      "source": "os-init",
+      "target": "vault",
+      "relation": "replicates"
+    }
+  ],
+  "metadata": {
+    "last_distillation": "2026-05-22",
+    "source": "Inception Engine"
+  }
+}
