@@ -20,13 +20,13 @@ if [ ! -f "$SKILL_SCRIPT" ]; then
 fi
 
 # --------------------------------------------------------------------------- #
-# 1. Run bootstrapper and capture output
-# --------------------------------------------------------------------------- #
+# 1. Run bootstrapper and capture output (disable git prompt for headless/docker environment)
 echo "🚀 os-init: Running bootstrapper..."
 PYTHON_BIN="python3"
 if [ -f "$HOME/.antigravity/venv/bin/python" ]; then
     PYTHON_BIN="$HOME/.antigravity/venv/bin/python"
 fi
+export GIT_TERMINAL_PROMPT=0
 OUTPUT=$("$PYTHON_BIN" "$SKILL_SCRIPT" "$@" 2>&1)
 
 # Display output (excluding last line with path)
