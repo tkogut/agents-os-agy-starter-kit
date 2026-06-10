@@ -1,44 +1,44 @@
 #!/bin/bash
 # ==============================================================================
 # AGENTS-OS v5.0 — Devcontainer / Codespaces Bootstrap
-# Uruchamiany automatycznie przez postCreateCommand w devcontainer.json
+# Automatically run by postCreateCommand in devcontainer.json
 # ==============================================================================
 set -e
 
-echo "🛸 Konfiguracja AGENTS-OS v5.0 w środowisku Devcontainer..."
+echo "🛸 Configuring AGENTS-OS v5.0 in Devcontainer environment..."
 
 # --------------------------------------------------------------------------- #
-# 1. Python venv + zależności
+# 1. Python venv + dependencies
 # --------------------------------------------------------------------------- #
-echo "🐍 Konfiguracja środowiska Python..."
+echo "🐍 Configuring Python environment..."
 python3 -m venv "$HOME/.antigravity/venv" 2>/dev/null || true
 "$HOME/.antigravity/venv/bin/pip" install --upgrade pip --quiet
 "$HOME/.antigravity/venv/bin/pip" install GitPython PyGithub --quiet
-echo "   ✅ Python venv gotowy: ~/.antigravity/venv"
+echo "   ✅ Python venv ready: ~/.antigravity/venv"
 
 # --------------------------------------------------------------------------- #
-# 2. Kopiowanie Vault (szablony projektów)
+# 2. Copying Vault (project templates)
 # --------------------------------------------------------------------------- #
 AGY_DIR="$HOME/.antigravity"
 VAULT_DIR="$AGY_DIR/templates/v5.0-swarm"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-echo "🛡️ Kopiowanie szablonów projektów (Vault)..."
+echo "🛡️ Copying project templates (Vault)..."
 mkdir -p "$VAULT_DIR"
 cp -ra "$PROJECT_ROOT/vault/." "$VAULT_DIR/"
-echo "   ✅ Vault skopiowany do: $VAULT_DIR"
+echo "   ✅ Vault copied to: $VAULT_DIR"
 
 # --------------------------------------------------------------------------- #
-# 3. Globalne skille
+# 3. Global skills
 # --------------------------------------------------------------------------- #
-echo "🧠 Instalacja globalnych skilli..."
+echo "🧠 Installing global skills..."
 for skill_dir in "$PROJECT_ROOT/global_skills"/*/; do
     skill_name=$(basename "$skill_dir")
     mkdir -p "$AGY_DIR/skills/$skill_name"
     cp -ra "$skill_dir." "$AGY_DIR/skills/$skill_name/"
 done
-echo "   ✅ Skille zainstalowane"
+echo "   ✅ Skills installed"
 
 # --------------------------------------------------------------------------- #
 # 4. Pre-commit security hook
@@ -46,13 +46,13 @@ echo "   ✅ Skille zainstalowane"
 if [ -f "$PROJECT_ROOT/hooks/pre-commit" ] && [ -d "$PROJECT_ROOT/.git/hooks" ]; then
     cp "$PROJECT_ROOT/hooks/pre-commit" "$PROJECT_ROOT/.git/hooks/pre-commit"
     chmod +x "$PROJECT_ROOT/.git/hooks/pre-commit"
-    echo "   ✅ Pre-commit security hook zainstalowany"
+    echo "   ✅ Pre-commit security hook installed"
 fi
 
 # --------------------------------------------------------------------------- #
-# 5. Shell config (os-init, os-add-skill jako funkcje)
+# 5. Shell config (os-init, os-add-skill as functions)
 # --------------------------------------------------------------------------- #
-echo "⚙️ Konfiguracja komend powłoki..."
+echo "⚙️ Configuring shell commands..."
 mkdir -p "$HOME/.bashrc.d"
 cat > "$HOME/.bashrc.d/antigravity" <<'SHELLEOF'
 # AGENTS-OS v5.0 — shell integration (devcontainer)
@@ -62,7 +62,7 @@ os-init() {
     local AGENTS_OS_SCRIPT
     AGENTS_OS_SCRIPT="$(find /workspaces -name 'os-init' -maxdepth 3 2>/dev/null | head -1)"
     if [ -z "$AGENTS_OS_SCRIPT" ]; then
-        echo "❌ os-init nie znaleziony w /workspaces"
+        echo "❌ os-init not found in /workspaces"
         return 1
     fi
     bash "$AGENTS_OS_SCRIPT" "$@"
@@ -75,23 +75,23 @@ os-add-skill() {
     local AGENTS_OS_SCRIPT
     AGENTS_OS_SCRIPT="$(find /workspaces -name 'os-add-skill' -maxdepth 3 2>/dev/null | head -1)"
     if [ -z "$AGENTS_OS_SCRIPT" ]; then
-        echo "❌ os-add-skill nie znaleziony w /workspaces"
+        echo "❌ os-add-skill not found in /workspaces"
         return 1
     fi
     python3 "$AGENTS_OS_SCRIPT" "$@"
 }
 SHELLEOF
 
-# Załaduj do bieżącej sesji
+# Load into current session
 echo 'source "$HOME/.bashrc.d/antigravity"' >> "$HOME/.bashrc" 2>/dev/null || true
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  ✅ AGENTS-OS v5.0 Devcontainer GOTOWY"
+echo "  ✅ AGENTS-OS v5.0 Devcontainer READY"
 echo ""
-echo "  Dostępne komendy:"
-echo "    os-init <nazwa-projektu>   — Utwórz nowy projekt Swarm"
-echo "    os-add-skill <skill>       — Dodaj skill do projektu"
+echo "  Available commands:"
+echo "    os-init <project-name>   — Create a new Swarm project"
+echo "    os-add-skill <skill>     — Add a skill to the project"
 echo ""
-echo "  🔑 Zaloguj się do GitHub: gh auth login"
+echo "  🔑 Log in to GitHub: gh auth login"
 echo "═══════════════════════════════════════════════════════"

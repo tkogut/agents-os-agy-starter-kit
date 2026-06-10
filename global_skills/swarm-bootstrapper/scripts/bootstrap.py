@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 AGENTS-OS v5.0 SWARM - Project Bootstrapper
-Kolejność: folder → vault → .gitignore → git init → commit → gh repo create → push
-Wypisuje __PROJECT_DIR__:<ścieżka> jako ostatnią linię (używana przez os-init do cd).
-Używa natywnych bibliotek GitPython i PyGithub zamiast surowych wywołań subprocess.
+Order: folder → vault → .gitignore → git init → commit → gh repo create → push
+Prints __PROJECT_DIR__:<path> as the last line (used by os-init to cd into the project).
+Uses native GitPython and PyGithub libraries instead of raw subprocess calls.
 """
 import os
 import sys
@@ -15,7 +15,7 @@ from github import Github, GithubException
 
 VAULT_DIR = os.path.expanduser("~/.antigravity/templates/v5.0-swarm")
 if not os.path.exists(VAULT_DIR):
-    # Domyślnie fallback do lokalnego folderu jeśli brak globalnej instalacji
+    # Default fallback to local folder if global installation is missing
     local_vault = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "vault")
     if os.path.exists(local_vault):
         VAULT_DIR = local_vault
@@ -29,7 +29,7 @@ if len(sys.argv) > 1:
         TARGET_DIR = os.path.abspath(arg1)
         project_name = os.path.basename(TARGET_DIR)
     elif "/" in arg1 or "\\" in arg1:
-        # Posiada separator ścieżki -> traktuj jako ścieżkę względną
+        # Contains path separator -> treat as a relative path
         TARGET_DIR = os.path.abspath(arg1)
         project_name = os.path.basename(TARGET_DIR)
     else:
@@ -42,23 +42,23 @@ else:
 
 # SAFETY GUARDRAIL
 if os.path.abspath(TARGET_DIR) == os.path.expanduser("~"):
-    print("❌ ERROR: Inicjalizacja w katalogu domowym ($HOME) jest ZABRONIONA.")
+    print("❌ ERROR: Initialization in the home directory ($HOME) is FORBIDDEN.")
     sys.exit(1)
 
 # --------------------------------------------------------------------------- #
-# 1. Tworzenie folderu projektu
+# 1. Create project folder
 # --------------------------------------------------------------------------- #
 if not os.path.exists(TARGET_DIR):
-    print(f"📦 Tworzenie projektu: {TARGET_DIR}")
+    print(f"📦 Creating project: {TARGET_DIR}")
     os.makedirs(TARGET_DIR)
 
-print(f"🚀 INICJACJA AGENTS-OS v5.0 SWARM W: {TARGET_DIR}")
+print(f"🚀 INITIALIZING AGENTS-OS v5.0 SWARM IN: {TARGET_DIR}")
 
 # --------------------------------------------------------------------------- #
-# 2. Kopiowanie Vault (Złoty Standard)
+# 2. Copy Vault (Golden Standard)
 # --------------------------------------------------------------------------- #
 if os.path.exists(VAULT_DIR):
-    print("🛡️  Transfer tożsamości (Kopiowanie Złotego Standardu)...")
+    print("🛡️  Identity transfer (Copying Golden Standard)...")
     for item in os.listdir(VAULT_DIR):
         src = os.path.join(VAULT_DIR, item)
         dst = os.path.join(TARGET_DIR, item)
@@ -69,37 +69,37 @@ if os.path.exists(VAULT_DIR):
             if not os.path.exists(dst):
                 shutil.copy2(src, dst)
 else:
-    print(f"⚠️  Vault nie znaleziony w {VAULT_DIR}. Tworzę minimalną strukturę...")
+    print(f"⚠️  Vault not found at {VAULT_DIR}. Creating minimal structure...")
     for d in [".agents/plans", ".agents/skills", "execution", "tmp"]:
         os.makedirs(os.path.join(TARGET_DIR, d), exist_ok=True)
 
 # --------------------------------------------------------------------------- #
-# 3. Tworzenie .gitignore jeśli brak
+# 3. Create .gitignore if missing
 # --------------------------------------------------------------------------- #
 gitignore_path = os.path.join(TARGET_DIR, ".gitignore")
 if not os.path.exists(gitignore_path):
-    print("📝 Tworzenie .gitignore...")
+    print("📝 Creating .gitignore...")
     with open(gitignore_path, "w") as f:
         f.write("# AGENTS-OS v5.0\ntmp/\n*.log\n__pycache__/\n.DS_Store\nnode_modules/\n.env\n")
 
-# Tworzymy README.md jeśli brak (potrzebny do commita)
+# Create README.md if missing (required for the initial commit)
 readme_path = os.path.join(TARGET_DIR, "README.md")
 if not os.path.exists(readme_path):
     with open(readme_path, "w") as f:
         f.write(f"# {project_name}\n\nAGENTS-OS v5.0 Swarm Edition\n")
 
 # --------------------------------------------------------------------------- #
-# 4. Pozyskanie tokena GitHub i określenie użytkownika
+# 4. Obtain GitHub token and determine user
 # --------------------------------------------------------------------------- #
 token = os.environ.get("GITHUB_TOKEN")
 if not token:
-    # Używamy natywnego odczytu z pliku hosts.yml aby uniknąć wywołania subprocess
+    # Use native read from hosts.yml to avoid subprocess calls
     gh_hosts_path = os.path.expanduser("~/.config/gh/hosts.yml")
     if os.path.exists(gh_hosts_path):
         try:
             with open(gh_hosts_path, "r") as f:
                 content = f.read()
-                # Proste wyciągnięcie tokena (zakładając strukturę hosts.yml)
+                # Simple token extraction (assuming hosts.yml structure)
                 if "oauth_token: " in content:
                     token = content.split("oauth_token: ")[1].split("\n")[0].strip()
         except Exception:
@@ -111,7 +111,7 @@ if token:
         g = Github(auth=github.Auth.Token(token))
         gh_user = g.get_user().login
     except Exception as e:
-        print(f"⚠️  PyGithub auth failed: {e}. Używam konfiguracji gita.")
+        print(f"⚠️  PyGithub auth failed: {e}. Using git configuration.")
 
 if not gh_user:
     try:
@@ -121,22 +121,22 @@ if not gh_user:
         pass
 
 if not gh_user:
-    gh_user = "twoj-github-username"
+    gh_user = "your-github-username"
 
 # --------------------------------------------------------------------------- #
-# 5. Git init (Natywnie przez GitPython)
+# 5. Git init (natively via GitPython)
 # --------------------------------------------------------------------------- #
 git_path = os.path.join(TARGET_DIR, ".git")
 try:
     if not os.path.exists(git_path):
-        print("📦 Inicjalizacja lokalnego repo git...")
+        print("📦 Initializing local git repo...")
         repo = git.Repo.init(TARGET_DIR)
         with repo.config_writer() as writer:
             writer.set_value("init", "defaultBranch", "main")
     else:
         repo = git.Repo(TARGET_DIR)
 
-    # Upewnij się, że branch to main
+    # Ensure branch is main
     try:
         repo.git.checkout("-b", "main")
     except Exception:
@@ -148,45 +148,45 @@ except Exception as e:
     print(f"❌ Error during git init: {e}")
     sys.exit(1)
 
-# Upewnij się, że tożsamość git jest skonfigurowana przed commitowaniem
+# Ensure git identity is configured before committing
 try:
     with repo.config_reader() as reader:
         has_name = reader.has_option("user", "name")
         has_email = reader.has_option("user", "email")
     if not has_name or not has_email:
-        print(f"   ⚙️  Brak tożsamości Git. Ustawiam lokalnie: {gh_user}")
+        print(f"   ⚙️  Git identity missing. Setting locally: {gh_user}")
         with repo.config_writer() as writer:
             writer.set_value("user", "name", gh_user)
             writer.set_value("user", "email", f"{gh_user}@users.noreply.github.com")
 except Exception as e:
-    print(f"⚠️  Nie udało się skonfigurować tożsamości git: {e}")
+    print(f"⚠️  Failed to configure git identity: {e}")
 
 # --------------------------------------------------------------------------- #
-# 6. Initial commit (Natywnie przez GitPython)
+# 6. Initial commit (natively via GitPython)
 # --------------------------------------------------------------------------- #
 if repo.is_dirty(untracked_files=True):
     print("📝 Initial commit...")
     try:
         repo.git.add(A=True)
         repo.index.commit("init: agents-os v5.0 swarm bootstrap")
-        print("   ✅ Commit gotowy.")
+        print("   ✅ Commit done.")
     except Exception as e:
         print(f"❌ Commit failed: {e}")
         sys.exit(1)
 else:
-    print("   ℹ️  Brak zmian do commita (repo już zainicjalizowane).")
+    print("   ℹ️  No changes to commit (repo already initialized).")
 
 # --------------------------------------------------------------------------- #
-# 7. GitHub repo — utwórz jeśli nie istnieje (Natywnie przez PyGithub)
+# 7. GitHub repo — create if it does not exist (natively via PyGithub)
 # --------------------------------------------------------------------------- #
-print(f"🐙 Sprawdzanie repo na GitHubie dla użytkownika {gh_user}...")
+print(f"🐙 Checking GitHub repo for user {gh_user}...")
 repo_exists = False
 if token:
     try:
         g = Github(auth=github.Auth.Token(token))
         g.get_repo(f"{gh_user}/{project_name}")
         repo_exists = True
-        print(f"   ✅ Repo już istnieje: {gh_user}/{project_name}")
+        print(f"   ✅ Repo already exists: {gh_user}/{project_name}")
     except GithubException as e:
         if e.status == 404:
             repo_exists = False
@@ -197,7 +197,7 @@ if token:
 
 if not repo_exists and token:
     try:
-        print(f"🐙 Tworzenie publicznego repo: {gh_user}/{project_name}...")
+        print(f"🐙 Creating public repo: {gh_user}/{project_name}...")
         g = Github(auth=github.Auth.Token(token))
         user = g.get_user()
         gh_repo = user.create_repo(
@@ -205,35 +205,35 @@ if not repo_exists and token:
             private=False,
             description=f"AGENTS-OS v5.0 — {project_name}"
         )
-        print(f"   ✅ Repo utworzone: {gh_repo.html_url}")
+        print(f"   ✅ Repo created: {gh_repo.html_url}")
     except Exception as e:
-        print(f"   ⚠️  Nie udało się utworzyć repozytorium przez API: {e}")
+        print(f"   ⚠️  Failed to create repository via API: {e}")
 
-# Ustawienie origin remote
+# Set origin remote
 try:
     origin = repo.remote("origin")
     origin.set_url(f"https://github.com/{gh_user}/{project_name}.git")
 except ValueError:
     origin = repo.create_remote("origin", f"https://github.com/{gh_user}/{project_name}.git")
-    print(f"   🔗 Remote origin ustawiony: https://github.com/{gh_user}/{project_name}.git")
+    print(f"   🔗 Remote origin set: https://github.com/{gh_user}/{project_name}.git")
 except Exception as e:
-    print(f"⚠️  Nie udało się skonfigurować remote origin: {e}")
+    print(f"⚠️  Failed to configure remote origin: {e}")
 
 # --------------------------------------------------------------------------- #
-# 8. Push (Natywnie przez GitPython)
+# 8. Push (natively via GitPython)
 # --------------------------------------------------------------------------- #
-print("🚀 Push na GitHub...")
+print("🚀 Pushing to GitHub...")
 try:
-    # Pobierz aktualną nazwę gałęzi
+    # Get current branch name
     current_branch = repo.active_branch.name
     origin.push(refspec=f"{current_branch}:{current_branch}", set_upstream=True)
-    print(f"   ✅ Push zakończony ({current_branch} → origin).")
+    print(f"   ✅ Push complete ({current_branch} → origin).")
 except Exception as e:
     print(f"   ⚠️  Push failed: {e}")
-    print(f"      Możesz pushować ręcznie: git push -u origin {repo.active_branch.name}")
+    print(f"      You can push manually: git push -u origin {repo.active_branch.name}")
 
-print(f"\n✨ AGENTS-OS v5.0 Swarm — projekt GOTOWY.")
+print(f"\n✨ AGENTS-OS v5.0 Swarm — project READY.")
 print(f"   GitHub: https://github.com/{gh_user}/{project_name}")
 
-# WAŻNE: ostatnia linia = sygnał dla os-init (shell function) do cd
+# IMPORTANT: last line = signal for os-init (shell function) to cd
 print(f"__PROJECT_DIR__:{TARGET_DIR}")
