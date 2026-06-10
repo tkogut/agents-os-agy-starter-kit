@@ -1,6 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # AGENTS-OS v5.0 SWARM EDITION - UNIVERSAL INSTALLER
+# Platforms: Linux (Debian/Ubuntu/WSL), macOS (Homebrew, ARM + Intel)
 # Architekt: Antigravity Orchestrator & Community
 # ==============================================================================
 
@@ -8,21 +9,75 @@ set -e
 
 echo "🚀 Rozpoczynam instalację AGENTS-OS v5.0 Swarm Edition..."
 
+# --------------------------------------------------------------------------- #
+# 0. Wykrywanie platformy
+# --------------------------------------------------------------------------- #
+OS_TYPE="$(uname -s)"
+ARCH="$(uname -m)"
+
+IS_MACOS=false
+IS_LINUX=false
+IS_WSL=false
+IS_DEVCONTAINER=false
+BREW_PREFIX=""
+
+case "$OS_TYPE" in
+    Darwin)
+        IS_MACOS=true
+        # Wykryj prefix Homebrew (ARM Apple Silicon vs Intel)
+        if [ "$ARCH" = "arm64" ]; then
+            BREW_PREFIX="/opt/homebrew"
+        else
+            BREW_PREFIX="/usr/local"
+        fi
+        echo "🍎 Platforma: macOS ($ARCH) | Homebrew prefix: $BREW_PREFIX"
+        ;;
+    Linux)
+        IS_LINUX=true
+        if grep -qi microsoft /proc/version 2>/dev/null; then
+            IS_WSL=true
+            echo "🐧 Platforma: Linux / WSL2"
+        elif [ -f "/.dockerenv" ] || [ "${AGENTS_OS_ENV}" = "devcontainer" ]; then
+            IS_DEVCONTAINER=true
+            echo "🐳 Platforma: Devcontainer / Docker"
+        else
+            echo "🐧 Platforma: Linux"
+        fi
+        ;;
+    *)
+        echo "⚠️  Nieznana platforma: $OS_TYPE. Kontynuuję ostrożnie..."
+        IS_LINUX=true
+        ;;
+esac
+
+# --------------------------------------------------------------------------- #
 # 1. Zależności systemu
+# --------------------------------------------------------------------------- #
 
 if command -v agy &> /dev/null || [ -f "/usr/local/bin/agy" ] || [ -f "$HOME/.local/bin/agy" ]; then
     echo "Antigravity CLI (agy) jest już zainstalowane. Pomijam pobieranie."
 else
     echo "Pobieranie i instalacja Antigravity CLI (Go Binary)..."
-    # Dynamiczne pobranie adresu URL z oficjalnego manifestu wydań dla linux_amd64
-    CLI_URL=$(curl -fsSL "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json" | grep -o '"url": *"[^"]*"' | sed 's/"url": *//;s/"//g')
+    # Wybierz manifest zależnie od platformy
+    if $IS_MACOS; then
+        if [ "$ARCH" = "arm64" ]; then
+            MANIFEST_PLATFORM="darwin_arm64"
+            FALLBACK_URL="https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.2-6109799369277440/darwin-arm64/cli_darwin_arm64.tar.gz"
+        else
+            MANIFEST_PLATFORM="darwin_amd64"
+            FALLBACK_URL="https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.2-6109799369277440/darwin-x64/cli_darwin_x64.tar.gz"
+        fi
+    else
+        MANIFEST_PLATFORM="linux_amd64"
+        FALLBACK_URL="https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.2-6109799369277440/linux-x64/cli_linux_x64.tar.gz"
+    fi
+    CLI_URL=$(curl -fsSL "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/${MANIFEST_PLATFORM}.json" | grep -o '"url": *"[^"]*"' | sed 's/"url": *//;s/"//g')
     if [ -z "$CLI_URL" ]; then
-        # Fallback w przypadku problemów z manifestem
-        CLI_URL="https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.2-6109799369277440/linux-x64/cli_linux_x64.tar.gz"
+        CLI_URL="$FALLBACK_URL"
     fi
     curl -fL -o antigravity.tar.gz "$CLI_URL"
     tar -xzf antigravity.tar.gz
-    mv antigravity agy
+    mv antigravity agy 2>/dev/null || true
     if sudo -n mv agy /usr/local/bin/ 2>/dev/null; then
         echo "✓ agy zainstalowany w /usr/local/bin"
     else
@@ -34,50 +89,75 @@ else
 fi
 
 if ! command -v gh &> /dev/null; then
-  echo "📦 Instalacja github-cli (gh) przez APT..."
-  if sudo -n true 2>/dev/null; then
-      sudo apt-get update -y &>/dev/null
-      sudo apt-get install -y curl gpg &>/dev/null
-      sudo mkdir -p /etc/apt/keyrings
-      sudo chmod 0755 /etc/apt/keyrings
-      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
-      sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-      sudo apt-get update -y &>/dev/null
-      sudo apt-get install -y gh &>/dev/null
-      echo "✓ gh zainstalowany przez APT"
+  if $IS_MACOS; then
+      echo "📦 Instalacja github-cli (gh) przez Homebrew..."
+      # Upewnij się, że Homebrew jest dostępny
+      if ! command -v brew &>/dev/null; then
+          echo "   ⚠️  Homebrew nie znaleziony. Instalacja Homebrew..."
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          # Załaduj Homebrew do bieżącej sesji
+          eval "$("${BREW_PREFIX}/bin/brew" shellenv)" 2>/dev/null || true
+      fi
+      brew install gh
+      echo "   ✓ gh zainstalowany przez Homebrew"
   else
-      echo "⚠️ Brak bezhasłowego sudo. Próba instalacji interaktywnej gh..."
-      if sudo apt-get update && sudo apt-get install -y curl gpg && \
-         sudo mkdir -p /etc/apt/keyrings && sudo chmod 0755 /etc/apt/keyrings && \
-         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
-         sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
-         sudo apt-get update && sudo apt-get install -y gh; then
-          echo "✓ gh zainstalowany przez APT"
+      echo "📦 Instalacja github-cli (gh) przez APT..."
+      if sudo -n true 2>/dev/null; then
+          sudo apt-get update -y &>/dev/null
+          sudo apt-get install -y curl gpg &>/dev/null
+          sudo mkdir -p /etc/apt/keyrings
+          sudo chmod 0755 /etc/apt/keyrings
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
+          sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt-get update -y &>/dev/null
+          sudo apt-get install -y gh &>/dev/null
+          echo "   ✓ gh zainstalowany przez APT"
       else
-          echo "⚠️ Nie udało się zainstalować gh. Zainstaluj ręcznie."
+          echo "⚠️ Brak bezhasłowego sudo. Próba instalacji interaktywnej gh..."
+          if sudo apt-get update && sudo apt-get install -y curl gpg && \
+             sudo mkdir -p /etc/apt/keyrings && sudo chmod 0755 /etc/apt/keyrings && \
+             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
+             sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+             echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+             sudo apt-get update && sudo apt-get install -y gh; then
+              echo "   ✓ gh zainstalowany przez APT"
+          else
+              echo "⚠️ Nie udało się zainstalować gh. Zainstaluj ręcznie: https://cli.github.com"
+          fi
       fi
   fi
 fi
 
 echo "📦 Konfiguracja izolowanego środowiska Python (venv)..."
-if python3 -m venv "$HOME/.antigravity/venv" 2>/dev/null; then
+# Na macOS użyj python3 z Homebrew jeśli dostępny
+if $IS_MACOS && [ -x "${BREW_PREFIX}/bin/python3" ]; then
+    PYTHON3_BIN="${BREW_PREFIX}/bin/python3"
+else
+    PYTHON3_BIN="python3"
+fi
+
+if "$PYTHON3_BIN" -m venv "$HOME/.antigravity/venv" 2>/dev/null; then
     "$HOME/.antigravity/venv/bin/pip" install --upgrade pip &>/dev/null || true
     echo "📦 Instalacja zależności Python (GitPython, PyGithub) w venv..."
     "$HOME/.antigravity/venv/bin/pip" install GitPython PyGithub
 else
-    echo "⚠️ Nie udało się utworzyć venv. Próba instalacji python3-venv..."
-    if sudo -n true 2>/dev/null; then
-        sudo apt-get update -y &>/dev/null
-        sudo apt-get install -y python3-venv &>/dev/null
+    if $IS_MACOS; then
+        echo "⚠️ Nie udało się utworzyć venv. Próba przez Homebrew python..."
+        brew install python3 &>/dev/null || true
+        "${BREW_PREFIX}/bin/python3" -m venv "$HOME/.antigravity/venv" 2>/dev/null || true
     else
-        sudo apt-get update && sudo apt-get install -y python3-venv
+        echo "⚠️ Nie udało się utworzyć venv. Próba instalacji python3-venv..."
+        if sudo -n true 2>/dev/null; then
+            sudo apt-get update -y &>/dev/null
+            sudo apt-get install -y python3-venv &>/dev/null
+        else
+            sudo apt-get update && sudo apt-get install -y python3-venv
+        fi
+        python3 -m venv "$HOME/.antigravity/venv" 2>/dev/null || true
     fi
-    
-    if python3 -m venv "$HOME/.antigravity/venv" 2>/dev/null; then
+    if [ -f "$HOME/.antigravity/venv/bin/pip" ]; then
         "$HOME/.antigravity/venv/bin/pip" install --upgrade pip &>/dev/null || true
-        echo "📦 Instalacja zależności Python (GitPython, PyGithub) w venv..."
         "$HOME/.antigravity/venv/bin/pip" install GitPython PyGithub
     else
         echo "⚠️ Nie można utworzyć venv. Instalacja globalna bibliotek Python..."
@@ -173,7 +253,7 @@ fi
 echo "⚙️ Generowanie i rejestracja konfiguracji powłoki w ~/.bashrc.d/antigravity..."
 mkdir -p "$HOME/.bashrc.d"
 cat << 'EOF' > "$HOME/.bashrc.d/antigravity"
-# Antigravity launch function for IDE
+# Antigravity launch function for IDE (WSL only)
 antigravity() {
     local win_user
     win_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
@@ -187,11 +267,15 @@ antigravity() {
         done
     fi
     if [ -z "$win_user" ]; then
-        win_user="admin_tk"
+        echo "⚠️  Nie znaleziono Antigravity IDE (Windows). Otwórz ręcznie."
+        return 1
     fi
     "/mnt/c/Users/${win_user}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide" --remote wsl+Ubuntu "$(pwd)"
 }
 alias antigravity-ide='antigravity'
+
+# PATH: ~/.local/bin (Linux/WSL)
+export PATH="$HOME/.local/bin:$HOME/.antigravity/venv/bin:$PATH"
 
 # ==============================================================================
 # os-init <nazwa-projektu>
@@ -238,12 +322,29 @@ EOF
 chmod +x "$HOME/.bashrc.d/antigravity"
 echo "✓ Plik ~/.bashrc.d/antigravity został zapisany."
 
-# Dodaj do ~/.bashrc
+# Dodaj do ~/.bashrc (Linux/WSL)
 if ! grep -q "source ~/.bashrc.d/antigravity" "$HOME/.bashrc" 2>/dev/null; then
     echo "" >> "$HOME/.bashrc"
     echo "# Import Antigravity environment settings" >> "$HOME/.bashrc"
     echo "source ~/.bashrc.d/antigravity" >> "$HOME/.bashrc"
     echo "✓ Dodano import do ~/.bashrc"
+fi
+
+# macOS: dodaj Homebrew shellenv + antigravity config do ~/.zprofile
+if $IS_MACOS; then
+    ZPROFILE="$HOME/.zprofile"
+    if [ -n "$BREW_PREFIX" ] && ! grep -q "brew shellenv" "$ZPROFILE" 2>/dev/null; then
+        echo "" >> "$ZPROFILE"
+        echo "# Homebrew" >> "$ZPROFILE"
+        echo "eval \"\$(${BREW_PREFIX}/bin/brew shellenv)\"" >> "$ZPROFILE"
+        echo "✓ Dodano Homebrew shellenv do ~/.zprofile"
+    fi
+    if ! grep -q "source ~/.bashrc.d/antigravity" "$ZPROFILE" 2>/dev/null; then
+        echo "" >> "$ZPROFILE"
+        echo "# AGENTS-OS" >> "$ZPROFILE"
+        echo "source ~/.bashrc.d/antigravity" >> "$ZPROFILE"
+        echo "✓ Dodano AGENTS-OS config do ~/.zprofile"
+    fi
 fi
 
 # 5. Instalacja rozszerzenia WSL dla Antigravity IDE
