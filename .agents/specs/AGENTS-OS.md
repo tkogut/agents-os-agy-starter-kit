@@ -19,7 +19,7 @@ The Auditor (Gemini 3 Flash):
 - Zadania: Linting, testy statyczne, sprawdzanie portów, logowanie WSL-Bridge.
 - Zasada: Monitoruje system w tle poprzez mechanizm Scheduled Tasks.
 
-The Orchestrator (Użytkownik):
+The Orchestrator (Użytkownik / Dev):
 - Rola: Ostateczna Instancja Decyzyjna (Sygnał: EXECUTE).
 
 📁 2. TOPOLOGIA SYSTEMOWA (SKILL ANATOMY v2.4)

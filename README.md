@@ -64,7 +64,7 @@ W Windows: `Win + R` → wpisz `wsl` → Enter
 
 ```bash
 mkdir -p ~/projects
-git clone https://github.com/tkogut/agents-os-agy-starter-kit.git ~/projects/agents-os-agy-starter-kit
+git clone https://github.com/YOUR_ORG_OR_USERNAME/agents-os-agy-starter-kit.git ~/projects/agents-os-agy-starter-kit
 cd ~/projects/agents-os-agy-starter-kit
 ```
 
@@ -425,7 +425,7 @@ System przypisuje asystentowi 3 tryby pracy:
 
 # 2. Clone the repository
 mkdir -p ~/projects
-git clone https://github.com/tkogut/agents-os-agy-starter-kit.git ~/projects/agents-os-agy-starter-kit
+git clone https://github.com/YOUR_ORG_OR_USERNAME/agents-os-agy-starter-kit.git ~/projects/agents-os-agy-starter-kit
 cd ~/projects/agents-os-agy-starter-kit
 
 # 3. Run the installer

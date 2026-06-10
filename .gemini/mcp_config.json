@@ -3,9 +3,9 @@
     "antigravity-docs": {
       "command": "node",
       "args": [
-        "/home/tkogut/projects/agents-os-agy-starter-kit/.agents/mcp-servers/antigravity-docs/mcp_server.js"
+        "${PROJECT_DIR}/.agents/mcp-servers/antigravity-docs/mcp_server.js"
       ],
-      "description": "Antigravity IDE documentation knowledge base — search_docs, read_doc, list_document_names"
+      "description": "Antigravity IDE documentation knowledge base — search_docs, read_doc, list_document_names. NOTE: ${PROJECT_DIR} is replaced at runtime by os-init during project setup."
     }
   }
 }

@@ -46,6 +46,34 @@ echo ""
 echo "📁 Projekt gotowy w: $PROJECT_DIR"
 
 # --------------------------------------------------------------------------- #
+# 2b. Dynamiczne generowanie .gemini/mcp_config.json dla projektu
+# --------------------------------------------------------------------------- #
+MCP_CONFIG_DIR="$PROJECT_DIR/.gemini"
+MCP_CONFIG_FILE="$MCP_CONFIG_DIR/mcp_config.json"
+MCP_SERVER_PATH="$PROJECT_DIR/.agents/mcp-servers/antigravity-docs/mcp_server.js"
+
+if [ -f "$MCP_SERVER_PATH" ]; then
+    echo "⚙️  Generowanie dynamicznego mcp_config.json..."
+    mkdir -p "$MCP_CONFIG_DIR"
+    cat > "$MCP_CONFIG_FILE" <<EOF
+{
+  "mcpServers": {
+    "antigravity-docs": {
+      "command": "node",
+      "args": [
+        "${MCP_SERVER_PATH}"
+      ],
+      "description": "Antigravity IDE documentation knowledge base — search_docs, read_doc, list_document_names"
+    }
+  }
+}
+EOF
+    echo "   ✅ mcp_config.json wygenerowany dla: $PROJECT_DIR"
+else
+    echo "   ℹ️  Serwer MCP nie znaleziony — pomijam generowanie mcp_config.json."
+fi
+
+# --------------------------------------------------------------------------- #
 # 3. Otwórz Antigravity IDE w środowisku WSL:Ubuntu
 # --------------------------------------------------------------------------- #
 # Używamy bin/antigravity-ide z --remote wsl+Ubuntu i ścieżką Linux.
@@ -64,9 +92,8 @@ if [ -z "$IDE_BIN" ]; then
     WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
     if [ -n "$WIN_USER" ]; then
         IDE_BIN="/mnt/c/Users/${WIN_USER}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
-    else
-        IDE_BIN="/mnt/c/Users/admin_tk/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
     fi
+    # NOTE: No fallback to a hardcoded username — IDE will be skipped gracefully below.
 fi
 
 if [ "${OS_INIT_TEST:-false}" = "true" ]; then
