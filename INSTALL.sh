@@ -169,7 +169,7 @@ antigravity() {
         done
     fi
     if [ -z "$win_user" ]; then
-        win_user="$USER"
+        win_user="admin_tk"
     fi
     "/mnt/c/Users/${win_user}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide" --remote wsl+Ubuntu "$(pwd)"
 }

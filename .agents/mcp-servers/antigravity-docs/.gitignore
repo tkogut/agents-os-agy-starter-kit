@@ -8,4 +8,3 @@ token.json
 .venv/
 *.log
 *.err
-rendered_page.html

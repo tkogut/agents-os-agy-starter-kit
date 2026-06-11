@@ -65,7 +65,7 @@ if [ -z "$IDE_BIN" ]; then
     if [ -n "$WIN_USER" ]; then
         IDE_BIN="/mnt/c/Users/${WIN_USER}/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
     else
-        IDE_BIN="/mnt/c/Users/$WIN_USER/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
+        IDE_BIN="/mnt/c/Users/admin_tk/AppData/Local/Programs/Antigravity IDE/bin/antigravity-ide"
     fi
 fi
 

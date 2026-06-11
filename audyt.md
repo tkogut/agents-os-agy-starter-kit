@@ -1,1 +1,8 @@
-STATUS: GREEN. Ready for Release.
+| Ryzyko | Lokalizacja | Opis problemu | Komenda naprawcza |
+| :--- | :--- | :--- | :--- |
+| Krytyczne | `.gemini/mcp_config.json:6` | Przypadkowo zachowana bezwzględna ścieżka do prywatnego katalogu `/home/tkogut/...`. Narusza sterylność i uniemożliwia działanie na innych maszynach. | `sed -i -E 's|/home/tkogut/[^"]+|./.agents/mcp-servers/antigravity-docs/mcp_server.js|g' .gemini/mcp_config.json` |
+| Średnie | `INSTALL.sh:172` | Fallback na zahardkodowanego prywatnego użytkownika Windows `admin_tk` (nie przenośny). | `sed -i 's/win_user="admin_tk"/win_user="$USER"/g' INSTALL.sh` |
+| Wysokie | `os-init:68` | Zahardkodowany prywatny profil `admin_tk` w ścieżce do `Antigravity IDE`. Psuje inicjalizację. | `sed -i 's/admin_tk/\$WIN_USER/g' os-init` |
+| Wysokie | `vault/` | Brak wymaganych przez anatomię pustych katalogów operacyjnych w sterylnej topologii (`src/` oraz `.agents/swarm/`). | `mkdir -p vault/src vault/.agents/swarm && touch vault/src/.gitkeep vault/.agents/swarm/.gitkeep` |
+| Niskie | `vault/.agents/rules/GOVERNANCE.md:48` | Zahardkodowany profil 'roostertk' w sekcji Remote Browser w Konstytucji. Powinno to być uogólnione np. do 'default'. | `sed -i "s/'roostertk'/'default'/g" vault/.agents/rules/GOVERNANCE.md` |
+| Niskie | `.agents/mcp-servers/antigravity-docs/rendered_page.html` | W repozytorium przez pomyłkę został dołączony wygenerowany dynamicznie duży plik HTML będący artefaktem wykonania (scrapera). Należy go usunąć. | `rm .agents/mcp-servers/antigravity-docs/rendered_page.html && echo "rendered_page.html" >> .agents/mcp-servers/antigravity-docs/.gitignore` |
