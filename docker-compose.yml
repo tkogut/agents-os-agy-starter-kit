@@ -9,14 +9,14 @@ services:
     container_name: agents-os-dev
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      # HOST_HOME is written to .env by INSTALL.sh — correctly resolves to /home/tkogut or /root
-      - ..:/projects
+      # Mount projects root directory directly to the host-matching home path
+      - ..:${HOST_HOME}/projects
       # Share SSH keys for seamless Git operations
-      - ${HOST_HOME:-$HOME}/.ssh:${HOST_HOME:-$HOME}/.ssh:ro
+      - ${HOST_HOME}/.ssh:${HOST_HOME}/.ssh:ro
       # Share Github CLI config (tokens, login state)
-      - ${HOST_HOME:-$HOME}/.config/gh:${HOST_HOME:-$HOME}/.config/gh:ro
+      - ${HOST_HOME}/.config/gh:${HOST_HOME}/.config/gh:ro
       # Share ~/.antigravity directory containing templates and skills
-      - ${HOST_HOME:-$HOME}/.antigravity:${HOST_HOME:-$HOME}/.antigravity
+      - ${HOST_HOME}/.antigravity:${HOST_HOME}/.antigravity
     environment:
       - AGENTS_OS_ENV=devcontainer
       - HOME=${HOST_HOME}
