@@ -45,7 +45,7 @@ Every agent session operates under the Triad model. Switching roles requires a f
 ## 3. REMOTE BROWSER & "PROOF OF LIFE"
 
 - **Bridge**: Port 9222 (Host) → 9223 (WSL Bridge).
-- **Profile**: Always use the `roostertk` profile.
+- **Profile**: Always use the `default` profile.
 - **Port 8000**: STRICTLY FORBIDDEN (System Hallucination Risk).
 
 ---
