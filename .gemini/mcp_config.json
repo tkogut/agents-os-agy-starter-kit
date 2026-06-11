@@ -3,7 +3,7 @@
     "antigravity-docs": {
       "command": "node",
       "args": [
-        "/home/tkogut/projects/agents-os-agy-starter-kit/.agents/mcp-servers/antigravity-docs/mcp_server.js"
+        "./.agents/mcp-servers/antigravity-docs/mcp_server.js"
       ],
       "description": "Antigravity IDE documentation knowledge base — search_docs, read_doc, list_document_names"
     }
