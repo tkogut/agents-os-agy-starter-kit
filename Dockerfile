@@ -46,6 +46,8 @@ WORKDIR /workspace
 # Setup shell environment prompt and trust all git directories in container
 RUN echo 'export PS1="🐳 \[\033[01;32m\]agents-os-container\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "' >> ~/.bashrc \
     && echo 'alias ll="ls -la"' >> ~/.bashrc \
-    && git config --global --add safe.directory '*'
+    && git config --global --add safe.directory '*' \
+    && ln -sf /workspace/os-init /usr/local/bin/os-init \
+    && ln -sf /workspace/os-add-skill /usr/local/bin/os-add-skill
 
 CMD ["/bin/bash"]
