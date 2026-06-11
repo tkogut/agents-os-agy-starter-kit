@@ -4,6 +4,14 @@ Wszystkie zmiany w tej wersji są bezpośrednią odpowiedzią na audyt przenasza
 
 ---
 
+## [5.0.1] - 2026-06-11
+
+### 🛡️ Audyt Bezpieczeństwa i Przenośności (Security & Portability Audit Fixes)
+* **Usuwanie zahardkodowanych fallbacków**: Zastąpiono zahardkodowany fallback użytkownika Windows `admin_tk` w `INSTALL.sh` oraz `os-init` na rzecz dynamicznego pobierania zmiennej `$USER` / `$WIN_USER` i bezpiecznego pomijania błędnych fallbacków.
+* **Porządek w topologii sterylnej (Vault)**: Stworzono wymagane katalogi `vault/src` oraz `vault/.agents/swarm` wraz z plikami `.gitkeep`.
+* **Generalizacja konfiguracji**: Zastąpiono spersonalizowany profil przeglądarki `roostertk` domyślnym profilem `default` w regułach GOVERNANCE Konstytucji (`vault/.agents/rules/GOVERNANCE.md`).
+* **Czyszczenie repozytorium**: Usunięto zbędny wygenerowany plik HTML `rendered_page.html` z katalogu bazy dokumentacji MCP i dodano go do reguł `.gitignore`.
+
 ## [5.0.0] - 2026-06-10
 
 ### 🚀 Aktualizacja Systemowa do v5.0 (System-wide Version Increment)
