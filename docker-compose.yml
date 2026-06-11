@@ -10,16 +10,16 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       # Mount projects root directory
-      - ..:/home/tkogut/projects
+      - ..:/home/${USER:-developer}/projects
       # Share SSH keys for seamless Git operations
-      - ~/.ssh:/home/tkogut/.ssh:ro
+      - ~/.ssh:/home/${USER:-developer}/.ssh:ro
       # Share Github CLI config (tokens, login state)
-      - ~/.config/gh:/home/tkogut/.config/gh:ro
+      - ~/.config/gh:/home/${USER:-developer}/.config/gh:ro
       # Share ~/.antigravity directory containing templates and skills
-      - ~/.antigravity:/home/tkogut/.antigravity
+      - ~/.antigravity:/home/${USER:-developer}/.antigravity
     environment:
       - AGENTS_OS_ENV=devcontainer
-      - HOME=/home/tkogut
+      - HOME=/home/${USER:-developer}
     # Keep container alive, interactive
     stdin_open: true
     tty: true
