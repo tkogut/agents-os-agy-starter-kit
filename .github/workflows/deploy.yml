@@ -1,0 +1,35 @@
+name: Deploy AGENTS-OS to Hostinger VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Hostinger VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: srv1490214.hstgr.cloud
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }} # Opcjonalnie, jeśli klucz ma hasło
+          script: |
+            # Utwórz katalog na projekt jeśli nie istnieje
+            mkdir -p /root/agents-os
+            cd /root/agents-os
+
+            # Jeśli katalog nie jest jeszcze repozytorium gita, sklonuj go
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/${{ github.repository }} .
+            else
+              git fetch --all
+              git reset --hard origin/main
+            fi
+
+            # Uruchomienie kontenera docker compose
+            docker compose down || true
+            docker compose up -d --build
+            docker system prune -f
+            docker compose ps
