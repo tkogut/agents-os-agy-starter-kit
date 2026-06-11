@@ -7,15 +7,19 @@ services:
       dockerfile: Dockerfile
     image: agents-os:latest
     container_name: agents-os-dev
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      # Mount project workspace
-      - .:/workspace
+      # Mount projects root directory
+      - ..:/home/${USER:-developer}/projects
       # Share SSH keys for seamless Git operations
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/home/${USER:-developer}/.ssh:ro
       # Share Github CLI config (tokens, login state)
-      - ~/.config/gh:/root/.config/gh:ro
+      - ~/.config/gh:/home/${USER:-developer}/.config/gh:ro
+      # Share ~/.antigravity directory containing templates and skills
+      - ~/.antigravity:/home/${USER:-developer}/.antigravity
     environment:
       - AGENTS_OS_ENV=devcontainer
+      - HOME=/home/${USER:-developer}
     # Keep container alive, interactive
     stdin_open: true
     tty: true
