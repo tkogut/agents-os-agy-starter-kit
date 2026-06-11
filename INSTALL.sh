@@ -9,6 +9,9 @@ set -e
 
 echo "🚀 Starting AGENTS-OS v5.0 Swarm Edition installation..."
 
+# Ensure required directories exist on host to avoid docker mounting issues
+mkdir -p "$HOME/.ssh" "$HOME/.config/gh" "$HOME/projects" "$HOME/.antigravity"
+
 # --------------------------------------------------------------------------- #
 # 0. Platform detection
 # --------------------------------------------------------------------------- #

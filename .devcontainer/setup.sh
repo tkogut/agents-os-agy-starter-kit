@@ -57,6 +57,7 @@ mkdir -p "$HOME/.bashrc.d"
 cat > "$HOME/.bashrc.d/antigravity" <<'SHELLEOF'
 # AGENTS-OS v5.0 — shell integration (devcontainer)
 export PATH="$HOME/.local/bin:$HOME/.antigravity/venv/bin:$PATH"
+export PROJECTS_ROOT="$HOME/projects"
 
 os-init() {
     local AGENTS_OS_SCRIPT

@@ -39,7 +39,12 @@
     "AGENTS_OS_ENV": "devcontainer"
   },
 
-  "mounts": [],
+  "mounts": [
+    "source=${localEnv:HOME}/projects,target=/home/vscode/projects,type=bind",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.antigravity,target=/home/vscode/.antigravity,type=bind,consistency=cached"
+  ],
 
   "forwardPorts": [],
 
