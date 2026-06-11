@@ -51,4 +51,9 @@ COPY os-init /usr/local/bin/os-init
 COPY os-add-skill /usr/local/bin/os-add-skill
 RUN chmod +x /usr/local/bin/os-init /usr/local/bin/os-add-skill
 
+# Entrypoint: create symlink $HOME/projects -> /projects at startup
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/bin/bash"]

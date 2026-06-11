@@ -251,15 +251,15 @@ fi
 # 5b. Docker environment configuration
 echo "🐳 Configuring Docker compose environment variables in .env..."
 if [ -f ".env" ]; then
-    # Remove existing UID/GID/USER if they exist to prevent duplicates
+    # Remove existing entries to prevent duplicates
     sed -i '/^UID=/d' .env
     sed -i '/^GID=/d' .env
-    sed -i '/^USER=/d' .env
+    sed -i '/^HOST_HOME=/d' .env
 fi
 echo "UID=$(id -u)" >> .env
 echo "GID=$(id -g)" >> .env
-echo "USER=$USER" >> .env
-echo "   ✓ Local host user variables set in .env"
+echo "HOST_HOME=$HOME" >> .env
+echo "   ✓ Local host user variables set in .env (HOST_HOME=$HOME)"
 
 echo "⚙️ Generating and registering shell configuration in ~/.bashrc.d/antigravity..."
 mkdir -p "$HOME/.bashrc.d"

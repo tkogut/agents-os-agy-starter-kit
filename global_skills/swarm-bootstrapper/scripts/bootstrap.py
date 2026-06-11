@@ -34,7 +34,8 @@ if len(sys.argv) > 1:
         project_name = os.path.basename(TARGET_DIR)
     else:
         project_name = arg1
-        PROJECTS_ROOT = os.path.expanduser("~/projects")
+        # Allow override via env var (set by Docker entrypoint or compose environment)
+        PROJECTS_ROOT = os.environ.get("PROJECTS_ROOT") or os.path.expanduser("~/projects")
         TARGET_DIR = os.path.join(PROJECTS_ROOT, project_name)
 else:
     project_name = os.path.basename(os.getcwd())
