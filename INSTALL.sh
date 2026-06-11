@@ -246,9 +246,20 @@ if [ -f "./hooks/pre-commit" ]; then
     cp ./hooks/pre-commit "$VAULT_DIR/hooks/pre-commit"
     chmod +x "$VAULT_DIR/hooks/pre-commit"
     echo "   ✓ pre-commit hook added to Vault template (new projects inherit it automatically)"
-else
-    echo "   ⚠️  hooks/pre-commit not found — skipping hook installation."
 fi
+
+# 5b. Docker environment configuration
+echo "🐳 Configuring Docker compose environment variables in .env..."
+if [ -f ".env" ]; then
+    # Remove existing UID/GID/USER if they exist to prevent duplicates
+    sed -i '/^UID=/d' .env
+    sed -i '/^GID=/d' .env
+    sed -i '/^USER=/d' .env
+fi
+echo "UID=$(id -u)" >> .env
+echo "GID=$(id -g)" >> .env
+echo "USER=$USER" >> .env
+echo "   ✓ Local host user variables set in .env"
 
 echo "⚙️ Generating and registering shell configuration in ~/.bashrc.d/antigravity..."
 mkdir -p "$HOME/.bashrc.d"
