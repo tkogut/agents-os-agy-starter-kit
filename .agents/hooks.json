@@ -1,3 +1,17 @@
 {
+  "guard-confidential-gemini": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/guard_confidential_gemini.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
   "before model call": "git worktree prune"
 }
